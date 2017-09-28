@@ -39,10 +39,11 @@ public class TwitterClassifier {
      */
     public static void main(String[] args) throws FileNotFoundException, IOException {
         ConvertDataSet cdt = new ConvertDataSet();
-        cdt.startConversion();
+//        cdt.randomize();
+//        cdt.startConversion();
         try {
             // read the training data
-            InputStreamFactory dataIn = new MarkableFileInputStreamFactory(new File(System.getProperty("user.home")+"\\TwitterClassifier\\Sentiment Analysis Dataset.txt"));
+            InputStreamFactory dataIn = new MarkableFileInputStreamFactory(new File(System.getProperty("user.home")+"\\TwitterClassifier\\Sentiment Analysis DataSubset.txt"));
             ObjectStream lineStream = new PlainTextByLineStream(dataIn, "UTF-8");
             ObjectStream sampleStream = new DocumentSampleStream(lineStream);
 
@@ -63,8 +64,8 @@ public class TwitterClassifier {
 
             // test the model file by subjecting it to prediction
             DocumentCategorizer doccat = new DocumentCategorizerME(model);
-            int correct = 0;
-            int total = 0;
+            double correct = 0;
+            double total = 0;
             String testSet = System.getProperty("user.home")+"\\TwitterClassifier\\Sentiment Analysis Testset.txt";
             BufferedReader br = null;
             br = new BufferedReader(new FileReader(testSet));
