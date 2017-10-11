@@ -20,7 +20,6 @@ import opennlp.tools.util.MarkableFileInputStreamFactory;
 import opennlp.tools.util.ObjectStream;
 import opennlp.tools.util.PlainTextByLineStream;
 import opennlp.tools.util.TrainingParameters;
-import opennlp.tools.util.eval.FMeasure;
 
 /**
  *
@@ -32,14 +31,6 @@ public class TwitterClassifier {
      * @param args the command line arguments
      * @throws java.io.FileNotFoundException
      */
-    static double ppv = 0;
-    static double npv = 0;
-    static double sens = 0;
-    static double spec = 0;
-    static double tp = 0;
-    static double fp = 0;
-    static double tn = 0;
-    static double fn = 0;
     static ArrayList<Threshold> thresholds = new ArrayList<>();
     static double prob;
 
@@ -70,8 +61,6 @@ public class TwitterClassifier {
 
             // test the model file by subjecting it to prediction
             DocumentCategorizer doccat = new DocumentCategorizerME(model);
-            double correct = 0;
-            double total = 0;
             int totalP = 0;
             int totalN = 0;
             String testSet = System.getProperty("user.home") + "\\TwitterClassifier\\Sentiment Analysis CleanTestset.txt";
@@ -135,7 +124,6 @@ public class TwitterClassifier {
                         thresholds.get(0).incrementFp();
                     }
                 }
-                total++;
             }
             //threshold 0 = 50%, threshold 4 = 90%
             for (int i = 0; i < thresholds.size(); i++) {
