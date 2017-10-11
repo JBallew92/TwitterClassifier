@@ -1,12 +1,5 @@
 package twitterclassifier;
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
-
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
@@ -14,6 +7,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import opennlp.tools.doccat.DoccatFactory;
 import opennlp.tools.doccat.DoccatModel;
 import opennlp.tools.doccat.DocumentCategorizer;
@@ -26,6 +20,7 @@ import opennlp.tools.util.MarkableFileInputStreamFactory;
 import opennlp.tools.util.ObjectStream;
 import opennlp.tools.util.PlainTextByLineStream;
 import opennlp.tools.util.TrainingParameters;
+import opennlp.tools.util.eval.FMeasure;
 
 /**
  *
@@ -37,13 +32,24 @@ public class TwitterClassifier {
      * @param args the command line arguments
      * @throws java.io.FileNotFoundException
      */
+    static double ppv = 0;
+    static double npv = 0;
+    static double sens = 0;
+    static double spec = 0;
+    static double tp = 0;
+    static double fp = 0;
+    static double tn = 0;
+    static double fn = 0;
+    static ArrayList<Threshold> thresholds = new ArrayList<>();
+    static double prob;
+
     public static void main(String[] args) throws FileNotFoundException, IOException {
         ConvertDataSet cdt = new ConvertDataSet();
-//        cdt.randomize();
-//        cdt.startConversion();
+//      cdt.randomize();
+//      cdt.startConversion();
         try {
             // read the training data
-            InputStreamFactory dataIn = new MarkableFileInputStreamFactory(new File(System.getProperty("user.home")+"\\TwitterClassifier\\Sentiment Analysis DataSubset.txt"));
+            InputStreamFactory dataIn = new MarkableFileInputStreamFactory(new File(System.getProperty("user.home") + "\\TwitterClassifier\\Sentiment Analysis CleanDataSubset.txt"));
             ObjectStream lineStream = new PlainTextByLineStream(dataIn, "UTF-8");
             ObjectStream sampleStream = new DocumentSampleStream(lineStream);
 
@@ -58,49 +64,87 @@ public class TwitterClassifier {
             System.out.println("\nModel is successfully trained.");
 
             // save the model to local
-            BufferedOutputStream modelOut = new BufferedOutputStream(new FileOutputStream(System.getProperty("user.home")+"\\TwitterClassifier\\en-twitter-classifier-naive-bayes.bin"));
+            BufferedOutputStream modelOut = new BufferedOutputStream(new FileOutputStream(System.getProperty("user.home") + "\\TwitterClassifier\\en-twitter-classifier-naive-bayes.bin"));
             model.serialize(modelOut);
-            System.out.println("\nTrained Model is saved locally at : " + System.getProperty("user.home")+"\\TwitterClassifier\\en-twitter-classifier-naive-bayes.bin");
+            System.out.println("\nTrained Model is saved locally at : " + System.getProperty("user.home") + "\\TwitterClassifier\\en-twitter-classifier-naive-bayes.bin");
 
             // test the model file by subjecting it to prediction
             DocumentCategorizer doccat = new DocumentCategorizerME(model);
             double correct = 0;
             double total = 0;
-            String testSet = System.getProperty("user.home")+"\\TwitterClassifier\\Sentiment Analysis Testset.txt";
+            int totalP = 0;
+            int totalN = 0;
+            String testSet = System.getProperty("user.home") + "\\TwitterClassifier\\Sentiment Analysis CleanTestset.txt";
             BufferedReader br = null;
             br = new BufferedReader(new FileReader(testSet));
             String line = "";
+            //create the thresholds
+            for (int i = 0; i < 5; i++) {
+                thresholds.add(new Threshold());
+            }
+            //begin classifying each tweet (each line)
             while ((line = br.readLine()) != null) {
-                //System.out.println(line);
                 String[] lineContent = line.split(" ");
                 String sentence = "";
+                //the first char in the string is its actual sentiment value so we only classify the tweet on the sentence that comes after.
                 for (int i = 0; i < lineContent.length; i++) {
                     sentence += lineContent[i];
                     sentence += " ";
                 }
-                //System.out.println(sentence);
                 String[] docWords = sentence.replaceAll("[^A-Za-z]", " ").split(" ");
                 double[] aProbs = doccat.categorize(docWords);
 
-                // print the probabilities of the categories
-//                System.out.println("\n---------------------------------\nCategory : Probability\n---------------------------------");
-//                for (int i = 0; i < doccat.getNumberOfCategories(); i++) {
-//                    System.out.println(doccat.getCategory(i) + " : " + aProbs[i]);
-//                }
-//                System.out.println("---------------------------------");
-//
-//                System.out.println("\n" + doccat.getBestCategory(aProbs) + " : is the predicted category for the given sentence.");
-//                System.out.println(lineContent[0]);
-                if (doccat.getBestCategory(aProbs).equals(lineContent[0])) {
-                    correct++;
+                prob = aProbs[0] * 100;
+                if ("1".equals(lineContent[0])) {
+                    totalP++;
+                } else {
+                    totalN++;
+                }
+                if (prob > 90) {
+                    if ("1".equals(lineContent[0])) {
+                        thresholds.get(4).incrementTp();
+                    } else {
+                        thresholds.get(4).incrementFp();
+                    }
+                }
+                if (prob > 80) {
+                    if ("1".equals(lineContent[0])) {
+                        thresholds.get(3).incrementTp();
+                    } else {
+                        thresholds.get(3).incrementFp();
+                    }
+                }
+                if (prob > 70) {
+                    if ("1".equals(lineContent[0])) {
+                        thresholds.get(2).incrementTp();
+                    } else {
+                        thresholds.get(2).incrementFp();
+                    }
+                }
+                if (prob > 60) {
+                    if ("1".equals(lineContent[0])) {
+                        thresholds.get(1).incrementTp();
+                    } else {
+                        thresholds.get(1).incrementFp();
+                    }
+                }
+                if (prob > 50) {
+                    if ("1".equals(lineContent[0])) {
+                        thresholds.get(0).incrementTp();
+                    } else {
+                        thresholds.get(0).incrementFp();
+                    }
                 }
                 total++;
-                //System.out.println("---------------------------------");
             }
-            System.out.println("Correct: " + correct);
-            System.out.println("Total Tests: " + total);
-            System.out.println("Ratio: " + (correct/total));
+            //threshold 0 = 50%, threshold 4 = 90%
+            for (int i = 0; i < thresholds.size(); i++) {
+                System.out.println("Threshold: " + i);
+                System.out.println("TPR: " + thresholds.get(i).getTp() / totalP);
+                System.out.println("FPR: " + thresholds.get(i).getFp() / totalN);
+            }
         } catch (IOException e) {
+            System.out.println(e);
             System.out.println("An exception in reading the training file. Please check.");
         }
     }
